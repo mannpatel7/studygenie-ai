@@ -6,6 +6,7 @@ import {
   CalendarDays, Menu, X, Sparkles, LogOut
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -19,6 +20,17 @@ const navItems = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+const handleLogout = () => {
+  console.log("Before:", localStorage.getItem("token"));
+
+  localStorage.removeItem("token");
+
+  console.log("After:", localStorage.getItem("token"));
+
+  navigate("/");
+};
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -73,13 +85,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link
-              to="/"
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
-              title="Log out"
-            >
-              <LogOut className="h-5 w-5 text-muted-foreground" />
-            </Link>
+            <button
+  onClick={handleLogout}
+  className="p-2 rounded-lg hover:bg-secondary transition-colors"
+  title="Log out"
+>
+  <LogOut className="h-5 w-5 text-muted-foreground"/>
+</button>
           </div>
         </header>
 
