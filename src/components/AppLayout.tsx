@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Upload PDF", icon: Upload, path: "/upload" },
+  
   { label: "Summary", icon: FileText, path: "/summary" },
   { label: "Flashcards", icon: Layers, path: "/flashcards" },
   { label: "Quiz", icon: HelpCircle, path: "/quiz" },
