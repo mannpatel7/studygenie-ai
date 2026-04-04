@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
@@ -8,14 +9,68 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
 
   const navigate = useNavigate();
   const baseUrl = "http://localhost:5000/api/auth";
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const googleInitialized = useRef(false);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+
+  const initGoogleSignIn = () => {
+    if (!(window as any).google || !googleClientId || googleInitialized.current) return;
+
+    const google = (window as any).google;
+    google.accounts.id.initialize({
+      client_id: googleClientId,
+      callback: handleGoogleSuccess,
+    });
+
+    if (googleButtonRef.current) {
+      google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "filled_blue",
+        size: "large",
+        text: "signin_with",
+      });
+    }
+
+    googleInitialized.current = true;
+    setGoogleReady(true);
+  };
+
+  const promptGoogleSignIn = () => {
+    if (!(window as any).google || !googleInitialized.current) return;
+
+    try {
+      (window as any).google.accounts.id.prompt();
+    } catch (error) {
+      console.error("Google prompt error:", error);
+      toast.error("Google sign-in is not available right now.");
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
     const token = localStorage.getItem("token");
     if (token) navigate("/dashboard");
+
+    // Load Google Sign-In script
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = initGoogleSignIn;
+    document.head.appendChild(script);
+
+    if ((window as any).google) {
+      initGoogleSignIn();
+    }
+
+    return () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
   }, [navigate]);
 
   const handleSubmit = async (e: any) => {
@@ -40,11 +95,31 @@ export default function Auth() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message);
-        alert("Signup successful");
+        toast.success("Signup successful");
         setIsLogin(true);
       }
     } catch (err: any) {
-      alert(err.message || "Error");
+      toast.error(err.message || "Error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/google-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: credentialResponse.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      localStorage.setItem("token", data.token);
+      toast.success("Logged in with Google!");
+      navigate("/dashboard", { replace: true });
+    } catch (err: any) {
+      toast.error(err.message || "Google login failed");
     } finally {
       setLoading(false);
     }
@@ -249,6 +324,31 @@ export default function Auth() {
           font-size: 14px;
           color: #9090a0;
           font-weight: 400;
+        }
+
+        /* About Section */
+        .sg-about {
+          margin-top: 64px;
+          opacity: 0;
+          animation: fadeUp 0.6s ease forwards;
+          animation-delay: 0.7s;
+        }
+        .sg-about-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 18px;
+          font-weight: 600;
+          color: #f0ece4;
+          margin-bottom: 16px;
+        }
+        .sg-about-text {
+          font-size: 13px;
+          line-height: 1.6;
+          color: #7a7a8a;
+          max-width: 380px;
+        }
+        .sg-about-highlight {
+          color: #a78bfa;
+          font-weight: 500;
         }
 
         /* Divider */
@@ -539,6 +639,19 @@ export default function Auth() {
               </div>
             ))}
           </div>
+
+          <div className="sg-about">
+            <div className="sg-about-title">About StudyGenie</div>
+            <p className="sg-about-text">
+              StudyGenie is your <span className="sg-about-highlight">AI-powered study companion</span> designed to revolutionize the way you learn.
+              Whether you're a student preparing for exams, a professional upskilling, or someone passionate about lifelong learning,
+              our platform transforms complex information into digestible, interactive study materials.
+            </p>
+            <p className="sg-about-text" style={{ marginTop: '12px' }}>
+              Join thousands of learners who have already discovered a smarter way to study with our
+              <span className="sg-about-highlight"> intelligent content processing</span> and personalized learning experience.
+            </p>
+          </div>
         </div>
 
         <div className="sg-divider" />
@@ -628,6 +741,24 @@ export default function Auth() {
                   ? "Sign In →"
                   : "Create Account →"}
               </button>
+
+              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #3a3a3a' }}>
+                <p style={{ fontSize: '12px', color: '#a89968', marginBottom: '12px', textAlign: 'center' }}>Or continue with Google</p>
+                <div
+                  ref={googleButtonRef}
+                  style={{ width: '100%', minHeight: '52px', display: googleReady ? 'block' : 'none' }}
+                />
+                {googleClientId && !googleReady && (
+                  <div style={{ width: '100%', minHeight: '52px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a89968', fontSize: '13px' }}>
+                    Loading Google sign-in…
+                  </div>
+                )}
+                {!googleClientId && (
+                  <p style={{ fontSize: '12px', color: '#ff6b6b', marginTop: '12px' }}>
+                    Google Client ID is not configured. Set <code>VITE_GOOGLE_CLIENT_ID</code> in your project .env.
+                  </p>
+                )}
+              </div>
             </form>
 
             <div className="sg-footer">

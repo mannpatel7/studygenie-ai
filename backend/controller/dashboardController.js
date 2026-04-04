@@ -12,9 +12,9 @@ export const getDashboard = async (req, res) => {
     }
 
     const avgScore =
-      stats.totalQuizzes > 0
-        ? Math.round(stats.totalScore / stats.totalQuizzes)
-        : 0;
+  stats.totalQuestions > 0
+    ? Math.round((stats.totalScore / stats.totalQuestions) * 100)
+    : 0;
 
     res.json({
       pdfsUploaded: stats.pdfsUploaded,

@@ -14,6 +14,10 @@ const userStatsSchema = new mongoose.Schema({
   totalScore: { type: Number, default: 0 },
   totalQuizzes: { type: Number, default: 0 },
   studyHours: { type: Number, default: 0 },
+  totalQuestions: {
+  type: Number,
+  default: 0,
+},
 
   recentActivity: [activitySchema],
 });

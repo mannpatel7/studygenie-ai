@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CalendarDays, Loader2, Clock, BookOpen, Target, Sparkles } from "lucide-react";
+import { CalendarDays, Loader2, Clock, Target, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface PlanItem {
@@ -9,56 +9,188 @@ interface PlanItem {
   hours: number;
 }
 
-const mockPlan: PlanItem[] = [
-  { day: "Monday", tasks: ["Biology Ch.1-3 Review", "Flashcard Practice"], hours: 3 },
-  { day: "Tuesday", tasks: ["Chemistry Lab Notes", "Practice Problems Set A"], hours: 2.5 },
-  { day: "Wednesday", tasks: ["Physics Equations Review", "Take Practice Quiz"], hours: 3 },
-  { day: "Thursday", tasks: ["Organic Chemistry Mechanisms", "Group Study Session"], hours: 4 },
-  { day: "Friday", tasks: ["Review Weak Areas", "Timed Practice Test"], hours: 2 },
-  { day: "Saturday", tasks: ["Full Mock Exam", "Analyze Mistakes"], hours: 5 },
-  { day: "Sunday", tasks: ["Light Review", "Rest & Recharge"], hours: 1 },
-];
-
 export default function Planner() {
-  const [subject, setSubject] = useState("");
-  const [examDate, setExamDate] = useState("");
-  const [hoursPerDay, setHoursPerDay] = useState("");
-  const [plan, setPlan] = useState<PlanItem[]>(mockPlan);
+  const [file, setFile] = useState<File | null>(() => {
+    try {
+      const saved = localStorage.getItem("plannerFile");
+      if (saved) {
+        const { name, size, type } = JSON.parse(saved);
+        return new File([new ArrayBuffer(0)], name, { type });
+      }
+    } catch (e) {
+      console.error("Failed to load file", e);
+    }
+    return null;
+  });
+  const [examDate, setExamDate] = useState(() => {
+    try {
+      return localStorage.getItem("plannerExamDate") || "";
+    } catch (e) {
+      return "";
+    }
+  });
+  const [hoursPerDay, setHoursPerDay] = useState(() => {
+    try {
+      return localStorage.getItem("plannerHoursPerDay") || "";
+    } catch (e) {
+      return "";
+    }
+  });
+  const [plan, setPlan] = useState<PlanItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("studyPlan");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to load study plan", e);
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(false);
 
-  const handleGenerate = (e: React.FormEvent) => {
+  useEffect(() => {
+    localStorage.setItem("studyPlan", JSON.stringify(plan));
+  }, [plan]);
+
+  useEffect(() => {
+    if (examDate) {
+      localStorage.setItem("plannerExamDate", examDate);
+    } else {
+      localStorage.removeItem("plannerExamDate");
+    }
+  }, [examDate]);
+
+  useEffect(() => {
+    if (hoursPerDay) {
+      localStorage.setItem("plannerHoursPerDay", hoursPerDay);
+    } else {
+      localStorage.removeItem("plannerHoursPerDay");
+    }
+  }, [hoursPerDay]);
+
+  useEffect(() => {
+    if (file) {
+      localStorage.setItem(
+        "plannerFile",
+        JSON.stringify({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        })
+      );
+    } else {
+      localStorage.removeItem("plannerFile");
+    }
+  }, [file]);
+
+  const handleClear = () => {
+    setFile(null);
+    setExamDate("");
+    setHoursPerDay("");
+    setPlan([]);
+    localStorage.removeItem("plannerFile");
+    localStorage.removeItem("plannerExamDate");
+    localStorage.removeItem("plannerHoursPerDay");
+    localStorage.removeItem("studyPlan");
+  };
+
+  const handleFileChange = (fileInput: File | null) => {
+    if (!fileInput) return;
+    if (fileInput.type !== "application/pdf") {
+      toast.error("Only PDF files are supported");
+      return;
+    }
+    setFile(fileInput);
+  };
+
+  const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject) { toast.error("Please enter a subject"); return; }
+
+    if (!file) {
+      toast.error("Please upload your syllabus PDF");
+      return;
+    }
+
+    if (!examDate) {
+      toast.error("Please choose an exam date");
+      return;
+    }
+
+    if (!hoursPerDay || Number(hoursPerDay) <= 0) {
+      toast.error("Please enter a valid hours per day");
+      return;
+    }
+
     setLoading(true);
     setPlan([]);
-    setTimeout(() => {
-      setPlan(mockPlan);
-      setLoading(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("examDate", examDate);
+      formData.append("hoursPerDay", String(Number(hoursPerDay)));
+
+      const response = await fetch("/api/study-plan", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate study plan");
+      }
+
+      const data = await response.json();
+
+      if (!data.plan || !Array.isArray(data.plan)) {
+        throw new Error("Invalid plan data received from server");
+      }
+
+      setPlan(data.plan);
       toast.success("Study plan generated!");
-    }, 2000);
+    } catch (error) {
+      console.error(error);
+      toast.error((error as Error).message || "Unable to generate study plan");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Study Planner</h2>
-        <p className="text-muted-foreground mt-1">AI-powered study schedule for your exams</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Study Planner</h2>
+          <p className="text-muted-foreground mt-1">AI-powered study schedule for your exams</p>
+        </div>
+        {(file || examDate || hoursPerDay || plan.length > 0) && (
+          <button
+            onClick={handleClear}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neutral-600 hover:bg-neutral-500 text-white text-sm font-medium transition-colors"
+          >
+            <X className="h-4 w-4" />
+            Clear All
+          </button>
+        )}
       </div>
 
       {/* Form */}
       <form onSubmit={handleGenerate} className="rounded-xl border border-border bg-card p-5 sm:p-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1.5 block">Subject</label>
+          <div className="sm:col-span-3">
+            <label className="text-sm font-medium text-foreground mb-1.5 block">Syllabus PDF</label>
             <div className="relative">
-              <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g. Biology"
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+                className="w-full rounded-lg bg-secondary border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring p-2"
               />
             </div>
+            {file ? (
+              <p className="mt-2 text-sm text-muted-foreground">Selected file: {file.name}</p>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">Upload your syllabus PDF to generate a study plan.</p>
+            )}
           </div>
           <div>
             <label className="text-sm font-medium text-foreground mb-1.5 block">Exam Date</label>

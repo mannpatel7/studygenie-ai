@@ -3,18 +3,19 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Upload, FileText, Layers, HelpCircle,
-  CalendarDays, Menu, X, Sparkles, LogOut
+  CalendarDays, Menu, X, Sparkles, LogOut, MessageSquare
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  
   { label: "Summary", icon: FileText, path: "/summary" },
   { label: "Flashcards", icon: Layers, path: "/flashcards" },
   { label: "Quiz", icon: HelpCircle, path: "/quiz" },
+  { label: "AI Chat", icon: MessageSquare, path: "/chat" },
   { label: "Study Planner", icon: CalendarDays, path: "/planner" },
+  { label: "About", icon: Sparkles, path: "/about" },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,11 +24,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
 const handleLogout = () => {
-  console.log("Before:", localStorage.getItem("token"));
-
+  // Clear auth token
   localStorage.removeItem("token");
 
-  console.log("After:", localStorage.getItem("token"));
+  // Clear Chat page data
+  localStorage.removeItem("chatMessages");
+
+  // Clear Summary page data
+  localStorage.removeItem("summaries");
+  localStorage.removeItem("summaryFile");
+
+  // Clear Study Planner page data
+  localStorage.removeItem("studyPlan");
+  localStorage.removeItem("plannerFile");
+  localStorage.removeItem("plannerExamDate");
+  localStorage.removeItem("plannerHoursPerDay");
 
   navigate("/");
 };

@@ -407,12 +407,40 @@ export default function Quiz() {
     clearTimer(); setSelected(i);
   };
 
-  const handleNext = () => {
-    setAnswers(prev => [...prev, timedOut ? null : selected]);
-    setSelected(null); setTimedOut(false);
-    if (current + 1 >= questions.length) { clearTimer(); setPhase("result"); }
-    else setCurrent(c => c + 1);
-  };
+ const handleNext = async () => {
+  const finalAnswers = [...answers, timedOut ? null : selected];
+
+  setAnswers(finalAnswers);
+  setSelected(null);
+  setTimedOut(false);
+
+  if (current + 1 >= questions.length) {
+    clearTimer();
+
+    const finalScore = finalAnswers.filter(
+      (a, i) => a === questions[i]?.correct
+    ).length;
+
+    try {
+      await fetch("http://localhost:5000/api/quiz-result", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    score: finalScore,
+    total: questions.length, // ✅ ADD THIS
+  }),
+});
+    } catch (err) {
+      console.error("Failed to save quiz result", err);
+    }
+
+    setPhase("result");
+  } else {
+    setCurrent(c => c + 1);
+  }
+};
 
   const reset = () => {
     clearTimer();

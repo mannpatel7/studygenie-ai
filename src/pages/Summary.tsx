@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Check, FileText, Loader2, Upload, X, Sparkles, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -31,11 +31,58 @@ const ACCENT_DOTS = [
 
 export default function Summary() {
   const [loading, setLoading]           = useState(false);
-  const [summaries, setSummaries]       = useState<{ title: string; points: string[] }[]>([]);
+  const [summaries, setSummaries]       = useState<{ title: string; points: string[] }[]>(() => {
+    try {
+      const saved = localStorage.getItem("summaries");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to load summaries", e);
+      return [];
+    }
+  });
   const [copiedIndex, setCopiedIndex]   = useState<number | null>(null);
-  const [file, setFile]                 = useState<File | null>(null);
+  const [file, setFile]                 = useState<File | null>(() => {
+    try {
+      const saved = localStorage.getItem("summaryFile");
+      if (saved) {
+        const { name, size, type } = JSON.parse(saved);
+        return new File([new ArrayBuffer(0)], name, { type });
+      }
+    } catch (e) {
+      console.error("Failed to load file", e);
+    }
+    return null;
+  });
   const [dragOver, setDragOver]         = useState(false);
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
+
+  // Save summaries to localStorage
+  useEffect(() => {
+    localStorage.setItem("summaries", JSON.stringify(summaries));
+  }, [summaries]);
+
+  // Save file name/metadata to localStorage
+  useEffect(() => {
+    if (file) {
+      localStorage.setItem(
+        "summaryFile",
+        JSON.stringify({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        })
+      );
+    } else {
+      localStorage.removeItem("summaryFile");
+    }
+  }, [file]);
+
+  const handleClear = () => {
+    setFile(null);
+    setSummaries([]);
+    localStorage.removeItem("summaryFile");
+    localStorage.removeItem("summaries");
+  };
 
   const handleFile = (f: File | null) => {
     if (!f) return;
@@ -93,21 +140,35 @@ export default function Summary() {
           </p>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={handleGenerate}
-          disabled={loading || !file}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-                     bg-violet-600 hover:bg-violet-500 text-white
-                     disabled:opacity-40 disabled:cursor-not-allowed
-                     shadow-lg shadow-violet-600/20 transition-colors"
-        >
-          {loading
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : <Sparkles className="h-4 w-4" />}
-          {loading ? "Generating…" : "Generate Summary"}
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={handleGenerate}
+            disabled={loading || !file}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                       bg-violet-600 hover:bg-violet-500 text-white
+                       disabled:opacity-40 disabled:cursor-not-allowed
+                       shadow-lg shadow-violet-600/20 transition-colors"
+          >
+            {loading
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Sparkles className="h-4 w-4" />}
+            {loading ? "Generating…" : "Generate Summary"}
+          </motion.button>
+          {(file || summaries.length > 0) && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleClear}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                         bg-neutral-600 hover:bg-neutral-500 text-white
+                         shadow-lg shadow-neutral-600/20 transition-colors"
+            >
+              Clear
+            </motion.button>
+          )}
+        </div>
       </motion.div>
 
       {/* UPLOAD ZONE */}
@@ -148,7 +209,7 @@ export default function Summary() {
               </p>
             </div>
             <button
-              onClick={(e) => { e.stopPropagation(); setFile(null); setSummaries([]); }}
+              onClick={(e) => { e.stopPropagation(); setFile(null); }}
               className="ml-2 p-1.5 rounded-lg hover:bg-secondary text-muted-foreground
                          hover:text-foreground transition-colors"
             >
