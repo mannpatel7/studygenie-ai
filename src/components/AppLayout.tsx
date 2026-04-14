@@ -3,45 +3,22 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Upload, FileText, Layers, HelpCircle,
-  CalendarDays, Menu, X, Sparkles, LogOut, MessageSquare
+  CalendarDays, Menu, X, Sparkles, LogOut
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
-import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Upload PDF", icon: Upload, path: "/upload" },
   { label: "Summary", icon: FileText, path: "/summary" },
   { label: "Flashcards", icon: Layers, path: "/flashcards" },
   { label: "Quiz", icon: HelpCircle, path: "/quiz" },
-  { label: "AI Chat", icon: MessageSquare, path: "/chat" },
   { label: "Study Planner", icon: CalendarDays, path: "/planner" },
-  { label: "About", icon: Sparkles, path: "/about" },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-
-const handleLogout = () => {
-  // Clear auth token
-  localStorage.removeItem("token");
-
-  // Clear Chat page data
-  localStorage.removeItem("chatMessages");
-
-  // Clear Summary page data
-  localStorage.removeItem("summaries");
-  localStorage.removeItem("summaryFile");
-
-  // Clear Study Planner page data
-  localStorage.removeItem("studyPlan");
-  localStorage.removeItem("plannerFile");
-  localStorage.removeItem("plannerExamDate");
-  localStorage.removeItem("plannerHoursPerDay");
-
-  navigate("/");
-};
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -96,13 +73,13 @@ const handleLogout = () => {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button
-  onClick={handleLogout}
-  className="p-2 rounded-lg hover:bg-secondary transition-colors"
-  title="Log out"
->
-  <LogOut className="h-5 w-5 text-muted-foreground"/>
-</button>
+            <Link
+              to="/"
+              className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              title="Log out"
+            >
+              <LogOut className="h-5 w-5 text-muted-foreground" />
+            </Link>
           </div>
         </header>
 
