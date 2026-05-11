@@ -2,40 +2,42 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { CalendarDays, Loader2, Clock, BookOpen, Target, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { aiApi } from "../api/aiApi";
 
 interface PlanItem {
-  day: string;
-  tasks: string[];
+  date: string;
+  topics: string[];
   hours: number;
 }
-
-const mockPlan: PlanItem[] = [
-  { day: "Monday", tasks: ["Biology Ch.1-3 Review", "Flashcard Practice"], hours: 3 },
-  { day: "Tuesday", tasks: ["Chemistry Lab Notes", "Practice Problems Set A"], hours: 2.5 },
-  { day: "Wednesday", tasks: ["Physics Equations Review", "Take Practice Quiz"], hours: 3 },
-  { day: "Thursday", tasks: ["Organic Chemistry Mechanisms", "Group Study Session"], hours: 4 },
-  { day: "Friday", tasks: ["Review Weak Areas", "Timed Practice Test"], hours: 2 },
-  { day: "Saturday", tasks: ["Full Mock Exam", "Analyze Mistakes"], hours: 5 },
-  { day: "Sunday", tasks: ["Light Review", "Rest & Recharge"], hours: 1 },
-];
 
 export default function Planner() {
   const [subject, setSubject] = useState("");
   const [examDate, setExamDate] = useState("");
   const [hoursPerDay, setHoursPerDay] = useState("");
-  const [plan, setPlan] = useState<PlanItem[]>(mockPlan);
+  const [plan, setPlan] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleGenerate = (e: React.FormEvent) => {
+  const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject) { toast.error("Please enter a subject"); return; }
+    if (!subject || !examDate || !hoursPerDay) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
     setLoading(true);
-    setPlan([]);
-    setTimeout(() => {
-      setPlan(mockPlan);
+    try {
+      const result = await aiApi.generateStudyPlan({
+        subject,
+        examDate,
+        hoursPerDay: parseInt(hoursPerDay),
+      });
+      setPlan(result);
+      toast.success("Study plan generated successfully!");
+    } catch (error) {
+      toast.error(error as string);
+    } finally {
       setLoading(false);
-      toast.success("Study plan generated!");
-    }, 2000);
+    }
   };
 
   return (
@@ -109,28 +111,30 @@ export default function Planner() {
             </div>
           ))}
         </div>
-      ) : plan.length > 0 ? (
+      ) : plan?.schedule ? (
         <motion.div
           initial="hidden"
           animate="show"
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
           className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
         >
-          {plan.map((p, i) => (
+          {plan.schedule.map((p: any, i: number) => (
             <motion.div
               key={i}
               variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }}
               className="rounded-xl border border-border bg-card p-5 shadow-card hover:shadow-elevated transition-shadow"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-foreground">{p.day}</h3>
+                <h3 className="font-semibold text-foreground">
+                  {new Date(p.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                </h3>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {p.hours}h
                 </div>
               </div>
               <ul className="space-y-2">
-                {p.tasks.map((t, j) => (
+                {p.topics.map((t: string, j: number) => (
                   <li key={j} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                     {t}

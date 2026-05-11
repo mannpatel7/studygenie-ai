@@ -1,21 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
-
-const cards = [
-  { front: "What is the powerhouse of the cell?", back: "Mitochondria — responsible for producing ATP through cellular respiration." },
-  { front: "What is DNA?", back: "Deoxyribonucleic acid — a molecule that carries genetic instructions for life." },
-  { front: "What is photosynthesis?", back: "The process by which plants convert light energy into chemical energy (glucose)." },
-  { front: "What is osmosis?", back: "The movement of water molecules through a semipermeable membrane from low to high solute concentration." },
-  { front: "What are enzymes?", back: "Biological catalysts that speed up chemical reactions in living organisms." },
-];
+import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { aiApi } from "../api/aiApi";
 
 export default function Flashcards() {
+  const location = useLocation();
+  const [cards, setCards] = useState<any[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if we have extracted text from upload
+    if (location.state?.extractedText) {
+      generateFlashcards(location.state.extractedText);
+    }
+  }, [location.state]);
+
+  const generateFlashcards = async (text: string) => {
+    setLoading(true);
+    try {
+      const result = await aiApi.generateFlashcards({
+        text,
+        subject: location.state?.filename?.replace('.pdf', '') || 'Study Material',
+        count: 10,
+      });
+      setCards(result);
+      toast.success("Flashcards generated successfully!");
+    } catch (error) {
+      toast.error(error as string);
+      // Fallback to sample cards
+      setCards([
+        { question: "What is the powerhouse of the cell?", answer: "Mitochondria — responsible for producing ATP through cellular respiration." },
+        { question: "What is DNA?", answer: "Deoxyribonucleic acid — a molecule that carries genetic instructions for life." },
+        { question: "What is photosynthesis?", answer: "The process by which plants convert light energy into chemical energy (glucose)." },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const next = () => { setFlipped(false); setIndex((i) => Math.min(i + 1, cards.length - 1)); };
   const prev = () => { setFlipped(false); setIndex((i) => Math.max(i - 1, 0)); };
+
+  if (loading) {
+    return (
+      <div className="max-w-xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Flashcards</h2>
+          <p className="text-muted-foreground mt-1">Generating flashcards...</p>
+        </div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (cards.length === 0) {
+    return (
+      <div className="max-w-xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Flashcards</h2>
+          <p className="text-muted-foreground mt-1">No flashcards available</p>
+          <p className="text-sm text-muted-foreground mt-2">Upload a PDF to generate flashcards</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
@@ -53,7 +107,7 @@ export default function Flashcards() {
           >
             <span className="text-xs font-medium text-primary mb-4 uppercase tracking-wider">Question</span>
             <p className="text-lg sm:text-xl font-semibold text-foreground text-center leading-relaxed">
-              {cards[index].front}
+              {cards[index].question}
             </p>
           </div>
 
@@ -64,7 +118,7 @@ export default function Flashcards() {
           >
             <span className="text-xs font-medium text-accent-foreground mb-4 uppercase tracking-wider">Answer</span>
             <p className="text-base sm:text-lg text-foreground text-center leading-relaxed">
-              {cards[index].back}
+              {cards[index].answer}
             </p>
           </div>
         </motion.div>

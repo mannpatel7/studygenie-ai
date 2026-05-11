@@ -1,44 +1,86 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Trophy, RotateCcw } from "lucide-react";
-
-const questions = [
-  {
-    question: "What is the basic unit of life?",
-    options: ["Atom", "Cell", "Molecule", "Organ"],
-    correct: 1,
-  },
-  {
-    question: "Which organelle is responsible for energy production?",
-    options: ["Nucleus", "Ribosome", "Mitochondria", "Golgi apparatus"],
-    correct: 2,
-  },
-  {
-    question: "What type of bond holds water molecules together?",
-    options: ["Ionic", "Covalent", "Hydrogen", "Metallic"],
-    correct: 2,
-  },
-  {
-    question: "DNA stands for?",
-    options: ["Deoxyribonucleic Acid", "Dinitrogen Acid", "Deoxyribose Nucleotide", "Dynamic Nucleic Acid"],
-    correct: 0,
-  },
-  {
-    question: "What is the process of cell division called?",
-    options: ["Osmosis", "Mitosis", "Photosynthesis", "Diffusion"],
-    correct: 1,
-  },
-];
+import { CheckCircle2, XCircle, Trophy, RotateCcw, Sparkles, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { aiApi } from "../api/aiApi";
 
 export default function Quiz() {
+  const location = useLocation();
+  const [questions, setQuestions] = useState<any[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if we have extracted text from upload
+    if (location.state?.extractedText) {
+      generateQuiz(location.state.extractedText);
+    }
+  }, [location.state]);
+
+  const generateQuiz = async (text: string) => {
+    setLoading(true);
+    try {
+      const result = await aiApi.generateQuiz({
+        text,
+        subject: location.state?.filename?.replace('.pdf', '') || 'Study Material',
+        count: 10,
+      });
+      setQuestions(result);
+      toast.success("Quiz generated successfully!");
+    } catch (error) {
+      toast.error(error as string);
+      // Fallback to sample questions
+      setQuestions([
+        {
+          question: "What is the basic unit of life?",
+          options: ["Atom", "Cell", "Molecule", "Organ"],
+          correctAnswer: "Cell",
+        },
+        {
+          question: "Which organelle is responsible for energy production?",
+          options: ["Nucleus", "Ribosome", "Mitochondria", "Golgi apparatus"],
+          correctAnswer: "Mitochondria",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
+          <p className="text-muted-foreground mt-1">Generating quiz...</p>
+        </div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
+          <p className="text-muted-foreground mt-1">No quiz available</p>
+          <p className="text-sm text-muted-foreground mt-2">Upload a PDF to generate a quiz</p>
+        </div>
+      </div>
+    );
+  }
 
   const q = questions[current];
   const isAnswered = selected !== null;
-  const isCorrect = selected === q?.correct;
+  const correctIndex = q.options.indexOf(q.correctAnswer);
+  const isCorrect = selected === correctIndex;
 
   const handleSelect = (i: number) => {
     if (isAnswered) return;
@@ -55,7 +97,7 @@ export default function Quiz() {
     }
   };
 
-  const score = answers.filter((a, i) => a === questions[i].correct).length;
+  const score = answers.filter((a, i) => a === questions[i].options.indexOf(questions[i].correctAnswer)).length;
 
   const reset = () => {
     setCurrent(0);
@@ -129,10 +171,10 @@ export default function Quiz() {
           </div>
 
           <div className="space-y-3">
-            {q.options.map((opt, i) => {
+            {q.options.map((opt: string, i: number) => {
               let styles = "border-border bg-card hover:border-primary/50";
               if (isAnswered) {
-                if (i === q.correct) styles = "border-success bg-success/10";
+                if (i === correctIndex) styles = "border-success bg-success/10";
                 else if (i === selected) styles = "border-destructive bg-destructive/10";
               } else if (i === selected) {
                 styles = "border-primary bg-accent";
@@ -146,8 +188,8 @@ export default function Quiz() {
                   className={`w-full text-left px-5 py-4 rounded-xl border text-sm font-medium text-foreground transition-colors flex items-center justify-between ${styles}`}
                 >
                   <span>{opt}</span>
-                  {isAnswered && i === q.correct && <CheckCircle2 className="h-5 w-5 text-success shrink-0" />}
-                  {isAnswered && i === selected && i !== q.correct && <XCircle className="h-5 w-5 text-destructive shrink-0" />}
+                  {isAnswered && i === correctIndex && <CheckCircle2 className="h-5 w-5 text-success shrink-0" />}
+                  {isAnswered && i === selected && i !== correctIndex && <XCircle className="h-5 w-5 text-destructive shrink-0" />}
                 </button>
               );
             })}

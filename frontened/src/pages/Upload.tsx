@@ -1,12 +1,17 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Upload as UploadIcon, FileText, X, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { pdfApi } from "../api/pdfApi";
+import { aiApi } from "../api/aiApi";
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [extractedText, setExtractedText] = useState<string>("");
+  const navigate = useNavigate();
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -24,13 +29,35 @@ export default function UploadPage() {
     if (f) setFile(f);
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!file) return;
+
     setLoading(true);
-    setTimeout(() => {
+    try {
+      // First, upload PDF and extract text
+      const uploadResult = await pdfApi.uploadPDF(file);
+      setExtractedText(uploadResult.text);
+      toast.success("PDF uploaded and text extracted successfully!");
+
+      // Then generate summary
+      const summaryResult = await aiApi.generateSummary({
+        text: uploadResult.text,
+        title: file.name.replace('.pdf', ''),
+      });
+
+      toast.success("Summary generated successfully!");
+      navigate("/summary", {
+        state: {
+          summary: summaryResult,
+          extractedText: uploadResult.text,
+          filename: file.name
+        }
+      });
+    } catch (error) {
+      toast.error(error as string);
+    } finally {
       setLoading(false);
-      toast.success("Content generated successfully!");
-    }, 2500);
+    }
   };
 
   return (
@@ -69,7 +96,7 @@ export default function UploadPage() {
             <p className="text-foreground font-semibold">
               Drop your PDF here or <span className="text-primary">browse</span>
             </p>
-            <p className="text-sm text-muted-foreground mt-1">Supports PDF files up to 50MB</p>
+            <p className="text-sm text-muted-foreground mt-1">Supports PDF files up to 10MB</p>
           </div>
         </div>
       </motion.div>
@@ -105,7 +132,7 @@ export default function UploadPage() {
         {loading ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin" />
-            Generating...
+            Processing PDF...
           </>
         ) : (
           <>

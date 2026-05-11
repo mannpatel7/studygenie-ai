@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Upload, FileText, Layers, HelpCircle,
   CalendarDays, Menu, X, Sparkles, LogOut
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAuth } from "../context/AuthContext";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -19,12 +20,19 @@ const navItems = [
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen flex bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card fixed inset-y-0 left-0 z-30">
-        <SidebarContent currentPath={location.pathname} />
+        <SidebarContent currentPath={location.pathname} user={user} onLogout={handleLogout} />
       </aside>
 
       {/* Mobile Overlay */}
@@ -50,7 +58,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <X className="h-5 w-5 text-foreground" />
                 </button>
               </div>
-              <SidebarContent currentPath={location.pathname} onNavigate={() => setSidebarOpen(false)} />
+              <SidebarContent currentPath={location.pathname} user={user} onNavigate={() => setSidebarOpen(false)} onLogout={handleLogout} />
             </motion.aside>
           </>
         )}
@@ -73,13 +81,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link
-              to="/"
+            <button
+              onClick={handleLogout}
               className="p-2 rounded-lg hover:bg-secondary transition-colors"
               title="Log out"
             >
               <LogOut className="h-5 w-5 text-muted-foreground" />
-            </Link>
+            </button>
           </div>
         </header>
 
@@ -98,7 +106,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SidebarContent({ currentPath, onNavigate }: { currentPath: string; onNavigate?: () => void }) {
+function SidebarContent({ currentPath, onNavigate, user, onLogout }: {
+  currentPath: string;
+  onNavigate?: () => void;
+  user?: any;
+  onLogout?: () => void;
+}) {
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 flex items-center gap-3">
@@ -107,6 +120,14 @@ function SidebarContent({ currentPath, onNavigate }: { currentPath: string; onNa
         </div>
         <span className="text-xl font-bold text-foreground">StudyGenie</span>
       </div>
+
+      {/* User info */}
+      {user && (
+        <div className="px-6 pb-4">
+          <p className="text-sm font-medium text-foreground">Welcome back,</p>
+          <p className="text-sm text-muted-foreground">{user.name}</p>
+        </div>
+      )}
 
       <nav className="flex-1 px-3 space-y-1">
         {navItems.map((item) => {
@@ -128,6 +149,19 @@ function SidebarContent({ currentPath, onNavigate }: { currentPath: string; onNa
           );
         })}
       </nav>
+
+      {/* Logout button in sidebar */}
+      {onLogout && (
+        <div className="p-3">
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            Logout
+          </button>
+        </div>
+      )}
 
       <div className="p-4 m-3 rounded-xl gradient-hero border border-border">
         <p className="text-sm font-medium text-foreground">Upgrade to Pro</p>
