@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ContentProvider } from "./context/ContentContext";
 import { AppLayout } from "@/components/AppLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -12,6 +13,8 @@ import Summary from "./pages/Summary";
 import Flashcards from "./pages/Flashcards";
 import Quiz from "./pages/Quiz";
 import Planner from "./pages/Planner";
+import Chat from "./pages/Chat";
+import Upgrade from "./pages/Upgrade";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +59,8 @@ function AppRoutes() {
       <Route path="/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
       <Route path="/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
       <Route path="/planner" element={<ProtectedRoute><Planner /></ProtectedRoute>} />
+      <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+      <Route path="/upgrade" element={<ProtectedRoute><Upgrade /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -64,13 +69,15 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
+      <ContentProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </ContentProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

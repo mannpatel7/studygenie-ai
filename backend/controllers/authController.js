@@ -27,6 +27,7 @@ const registerUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        isPremium: user.isPremium,
         token: generateToken(user._id),
       });
     } else {
@@ -48,16 +49,21 @@ const loginUser = async (req, res) => {
     // Check for user email
     const user = await User.findOne({ email });
 
-    if (user && (await user.matchPassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id),
-      });
-    } else {
-      res.status(401).json({ message: 'Invalid credentials' });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with that email.' });
     }
+
+    if (!(await user.matchPassword(password))) {
+      return res.status(401).json({ message: 'Incorrect password. Please try again.' });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isPremium: user.isPremium,
+      token: generateToken(user._id),
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

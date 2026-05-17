@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi } from '../api/authApi';
 
 const AuthContext = createContext();
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (credentials) => {
+  const login = useCallback(async (credentials) => {
     try {
       const userData = await authApi.login(credentials);
       setUser(userData);
@@ -42,9 +42,9 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       throw error;
     }
-  };
+  }, []);
 
-  const register = async (userData) => {
+  const register = useCallback(async (userData) => {
     try {
       const newUser = await authApi.register(userData);
       setUser(newUser);
@@ -52,18 +52,30 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       throw error;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const refreshUser = useCallback(async () => {
+    try {
+      const userData = await authApi.getProfile();
+      setUser(userData);
+      return userData;
+    } catch (error) {
+      console.error('Failed to refresh user profile', error);
+      return null;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
     authApi.logout();
     setUser(null);
-  };
+  }, []);
 
   const value = {
     user,
     login,
     register,
     logout,
+    refreshUser,
     loading,
     isAuthenticated: !!user,
   };

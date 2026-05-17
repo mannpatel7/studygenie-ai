@@ -1,13 +1,23 @@
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Layers, HelpCircle, CalendarDays, TrendingUp, Clock } from "lucide-react";
+import { FileText, Layers, HelpCircle, CalendarDays, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const stats = [
-  { label: "PDFs Uploaded", value: "12", icon: FileText, change: "+3 this week" },
-  { label: "Flashcards", value: "148", icon: Layers, change: "+24 today" },
-  { label: "Quizzes Taken", value: "8", icon: HelpCircle, change: "85% avg score" },
-  { label: "Study Hours", value: "26", icon: Clock, change: "+4.5 hrs" },
-];
+import { toast } from "sonner";
+import { Button } from "../components/ui/button";
+import { billingApi } from "../api/billingApi";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "../components/ui/alert-dialog";
+import { useAuth } from "../context/AuthContext";
+import { useContent } from "../context/ContentContext";
 
 const quickActions = [
   { label: "Upload PDF", icon: FileText, path: "/upload", color: "gradient-primary" },
@@ -26,11 +36,129 @@ const item = {
 };
 
 export default function Dashboard() {
+  const { content, history } = useContent();
+  const { user, refreshUser } = useAuth();
+  const [cancelling, setCancelling] = useState(false);
+
+  const stats = useMemo(() => {
+    const flashcardsCount = history.reduce((sum, item) => sum + (item.flashcards?.length ?? 0), 0);
+    const quizCount = history.reduce((sum, item) => sum + (item.quiz?.length ?? 0), 0);
+    const studyHours = history.reduce((sum, item) => {
+      const scheduleHours = item.studyPlan?.schedule?.reduce((dayTotal, day) => dayTotal + (Number(day.hours) || 0), 0) ?? 0;
+      return sum + scheduleHours;
+    }, 0);
+    const pdfCount = history.length;
+
+    return [
+      {
+        label: "PDFs Uploaded",
+        value: `${pdfCount}`,
+        icon: FileText,
+        change: pdfCount > 0 ? "Upload history saved" : "Upload a PDF to begin",
+      },
+      {
+        label: "Flashcards",
+        value: `${flashcardsCount}`,
+        icon: Layers,
+        change: flashcardsCount > 0 ? "Flashcards generated" : "Generate flashcards",
+      },
+      {
+        label: "Quiz Questions",
+        value: `${quizCount}`,
+        icon: HelpCircle,
+        change: quizCount > 0 ? "Quiz content ready" : "Generate a quiz",
+      },
+      {
+        label: "Study Hours",
+        value: `${studyHours}`,
+        icon: Clock,
+        change: studyHours > 0 ? "Planned in your schedule" : "Create a study plan",
+      },
+    ];
+  }, [history]);
+
+  const recentActivity = useMemo(() => {
+    if (history.length === 0) {
+      return [{ text: "No activity yet", time: "Upload a PDF to start generating content" }];
+    }
+
+    const activities: Array<{ text: string; time: string }> = [];
+
+    history.forEach((item, itemIndex) => {
+      const source = item.filename ? `from ${item.filename}` : `from upload #${itemIndex + 1}`;
+      const timeLabel = item.summary?.createdAt || item.studyPlan?.createdAt ? "Earlier" : "Recent";
+
+      if (item.summary) {
+        activities.push({ text: `Generated summary ${source}`, time: timeLabel });
+      }
+
+      if (item.flashcards?.length) {
+        activities.push({ text: `Created ${item.flashcards.length} flashcards ${source}`, time: timeLabel });
+      }
+
+      if (item.quiz?.length) {
+        activities.push({ text: `Prepared ${item.quiz.length} quiz questions ${source}`, time: timeLabel });
+      }
+
+      if (item.studyPlan?.schedule?.length) {
+        activities.push({ text: `Generated study plan with ${item.studyPlan.schedule.length} days ${source}`, time: timeLabel });
+      }
+    });
+
+    const visibleActivities = activities.slice(-6).reverse();
+    return visibleActivities.length
+      ? visibleActivities
+      : [{ text: "Your content history is ready", time: "Recent" }];
+  }, [history]);
+
   return (
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Welcome back! 👋</h2>
         <p className="text-muted-foreground mt-1">Here's your study overview</p>
+        {user?.isPremium && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-success/30 bg-success/10 px-4 py-2 text-sm text-foreground">
+              <Sparkles className="h-4 w-4 text-success" />
+              Premium member
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Cancel Premium
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel premium membership?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    You will lose access to Study Planner and AI Chat, and premium features will be disabled.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep Premium</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      setCancelling(true);
+                      try {
+                        await billingApi.cancelPremium();
+                        await refreshUser();
+                        toast.success('Your premium membership has been canceled.');
+                      } catch (error) {
+                        toast.error(error as string);
+                      } finally {
+                        setCancelling(false);
+                      }
+                    }}
+                    disabled={cancelling}
+                  >
+                    {cancelling ? 'Canceling...' : 'Confirm Cancel'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -84,11 +212,7 @@ export default function Dashboard() {
       <div>
         <h3 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
         <div className="rounded-xl border border-border bg-card divide-y divide-border">
-          {[
-            { text: "Generated summary for Biology Chapter 5", time: "2 hours ago" },
-            { text: "Completed Quiz: Organic Chemistry", time: "5 hours ago" },
-            { text: "Created 30 flashcards from Physics notes", time: "Yesterday" },
-          ].map((a, i) => (
+          {recentActivity.map((a, i) => (
             <div key={i} className="px-5 py-4 flex items-center justify-between">
               <span className="text-sm text-foreground">{a.text}</span>
               <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">{a.time}</span>

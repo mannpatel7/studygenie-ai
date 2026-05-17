@@ -3,10 +3,11 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Upload, FileText, Layers, HelpCircle,
-  CalendarDays, Menu, X, Sparkles, LogOut
+  CalendarDays, Menu, X, Sparkles, LogOut, MessageSquare
 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "../context/AuthContext";
+import { useContent } from "../context/ContentContext";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -15,6 +16,8 @@ const navItems = [
   { label: "Flashcards", icon: Layers, path: "/flashcards" },
   { label: "Quiz", icon: HelpCircle, path: "/quiz" },
   { label: "Study Planner", icon: CalendarDays, path: "/planner" },
+  { label: "AI Chat", icon: MessageSquare, path: "/chat" },
+  { label: "Upgrade", icon: Sparkles, path: "/upgrade" },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -22,8 +25,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const { clearContent } = useContent();
 
   const handleLogout = () => {
+    clearContent();
     logout();
     navigate("/");
   };
@@ -130,24 +135,26 @@ function SidebarContent({ currentPath, onNavigate, user, onLogout }: {
       )}
 
       <nav className="flex-1 px-3 space-y-1">
-        {navItems.map((item) => {
-          const active = currentPath === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onNavigate}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                active
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          );
-        })}
+        {navItems
+          .filter((item) => !(user?.isPremium && item.path === '/upgrade'))
+          .map((item) => {
+            const active = currentPath === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={onNavigate}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            );
+          })}
       </nav>
 
       {/* Logout button in sidebar */}
@@ -162,14 +169,6 @@ function SidebarContent({ currentPath, onNavigate, user, onLogout }: {
           </button>
         </div>
       )}
-
-      <div className="p-4 m-3 rounded-xl gradient-hero border border-border">
-        <p className="text-sm font-medium text-foreground">Upgrade to Pro</p>
-        <p className="text-xs text-muted-foreground mt-1">Unlock unlimited AI features</p>
-        <button className="mt-3 w-full py-2 text-xs font-semibold rounded-lg gradient-primary text-primary-foreground">
-          Upgrade Now
-        </button>
-      </div>
     </div>
   );
 }

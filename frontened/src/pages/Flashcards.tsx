@@ -1,51 +1,58 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { aiApi } from "../api/aiApi";
+import { useContent } from "../context/ContentContext";
+
+const formatFlashcardText = (text: string) => {
+  if (!text) return text;
+
+  let formatted = text.trim();
+  formatted = formatted.replace(/([a-z0-9])\(/gi, "$1 (");
+  formatted = formatted.replace(/\)([a-zA-Z0-9])/g, ") $1");
+  formatted = formatted.replace(/,\s*/g, ", ");
+  formatted = formatted.replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+  formatted = formatted.replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+  formatted = formatted.replace(/\s{2,}/g, " ");
+
+  const commonFixes: Array<[RegExp, string]> = [
+    [/searchandmatch/gi, "search and match"],
+    [/findall/gi, "find all"],
+    [/replacepartofastring/gi, "replace part of a string"],
+    [/breakstringintoasubstrings/gi, "break string into a substrings"],
+    [/aregularexpression/gi, "a regular expression"],
+    [/isasequenceofcharacters/gi, "is a sequence of characters"],
+  ];
+
+  commonFixes.forEach(([pattern, replacement]) => {
+    formatted = formatted.replace(pattern, replacement);
+  });
+
+  return formatted.trim();
+};
 
 export default function Flashcards() {
-  const location = useLocation();
-  const [cards, setCards] = useState<any[]>([]);
+  const { content, isLoading } = useContent();
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Check if we have extracted text from upload
-    if (location.state?.extractedText) {
-      generateFlashcards(location.state.extractedText);
-    }
-  }, [location.state]);
+  const cards = content?.flashcards || [];
 
-  const generateFlashcards = async (text: string) => {
-    setLoading(true);
-    try {
-      const result = await aiApi.generateFlashcards({
-        text,
-        subject: location.state?.filename?.replace('.pdf', '') || 'Study Material',
-        count: 10,
-      });
-      setCards(result);
-      toast.success("Flashcards generated successfully!");
-    } catch (error) {
-      toast.error(error as string);
-      // Fallback to sample cards
-      setCards([
-        { question: "What is the powerhouse of the cell?", answer: "Mitochondria — responsible for producing ATP through cellular respiration." },
-        { question: "What is DNA?", answer: "Deoxyribonucleic acid — a molecule that carries genetic instructions for life." },
-        { question: "What is photosynthesis?", answer: "The process by which plants convert light energy into chemical energy (glucose)." },
-      ]);
-    } finally {
-      setLoading(false);
-    }
+  const next = () => {
+    setFlipped(false);
+    setIndex((i) => Math.min(i + 1, cards.length - 1));
   };
 
-  const next = () => { setFlipped(false); setIndex((i) => Math.min(i + 1, cards.length - 1)); };
-  const prev = () => { setFlipped(false); setIndex((i) => Math.max(i - 1, 0)); };
+  const prev = () => {
+    setFlipped(false);
+    setIndex((i) => Math.max(i - 1, 0));
+  };
 
-  if (loading) {
+  const reset = () => {
+    setFlipped(false);
+    setIndex(0);
+  };
+
+  if (isLoading) {
     return (
       <div className="max-w-xl mx-auto space-y-6">
         <div className="text-center">
@@ -78,7 +85,6 @@ export default function Flashcards() {
         <p className="text-muted-foreground mt-1">Tap the card to flip it</p>
       </div>
 
-      {/* Progress */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
           <motion.div
@@ -92,60 +98,62 @@ export default function Flashcards() {
         </span>
       </div>
 
-      {/* Card */}
       <div className="perspective-[1200px]" onClick={() => setFlipped(!flipped)}>
         <motion.div
           animate={{ rotateY: flipped ? 180 : 0 }}
           transition={{ duration: 0.5, type: "spring", stiffness: 200, damping: 25 }}
           style={{ transformStyle: "preserve-3d" }}
-          className="relative w-full aspect-[4/3] cursor-pointer"
+          className="relative w-full h-80 cursor-pointer"
         >
-          {/* Front */}
           <div
-            className="absolute inset-0 rounded-2xl border border-border bg-card shadow-elevated p-6 sm:p-8 flex flex-col items-center justify-center backface-hidden"
+            className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 p-8 flex flex-col justify-center items-center text-white shadow-xl"
             style={{ backfaceVisibility: "hidden" }}
           >
-            <span className="text-xs font-medium text-primary mb-4 uppercase tracking-wider">Question</span>
-            <p className="text-lg sm:text-xl font-semibold text-foreground text-center leading-relaxed">
-              {cards[index].question}
-            </p>
+            <div className="text-center">
+              <Sparkles className="h-8 w-8 mx-auto mb-4 opacity-80" />
+              <h3 className="text-xl font-semibold mb-2">Question</h3>
+              <p className="text-lg leading-relaxed">{formatFlashcardText(cards[index].question)}</p>
+            </div>
           </div>
 
-          {/* Back */}
           <div
-            className="absolute inset-0 rounded-2xl border border-border bg-accent shadow-elevated p-6 sm:p-8 flex flex-col items-center justify-center"
+            className="absolute inset-0 rounded-2xl bg-gradient-to-br from-green-500 to-teal-600 p-8 flex flex-col justify-center items-center text-white shadow-xl"
             style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
           >
-            <span className="text-xs font-medium text-accent-foreground mb-4 uppercase tracking-wider">Answer</span>
-            <p className="text-base sm:text-lg text-foreground text-center leading-relaxed">
-              {cards[index].answer}
-            </p>
+            <div className="text-center">
+              <Sparkles className="h-8 w-8 mx-auto mb-4 opacity-80" />
+              <h3 className="text-xl font-semibold mb-2">Answer</h3>
+              <p className="text-lg leading-relaxed">{formatFlashcardText(cards[index].answer)}</p>
+            </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-center gap-3">
+      <div className="flex items-center justify-between">
         <button
           onClick={prev}
           disabled={index === 0}
-          className="h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronLeft className="h-5 w-5 text-foreground" />
+          <ChevronLeft className="h-4 w-4" />
+          Previous
         </button>
+
         <button
-          onClick={() => { setIndex(0); setFlipped(false); }}
-          className="h-12 px-5 rounded-xl border border-border bg-card flex items-center justify-center gap-2 hover:bg-secondary transition-colors"
+          onClick={reset}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
         >
-          <RotateCcw className="h-4 w-4 text-foreground" />
-          <span className="text-sm font-medium text-foreground">Reset</span>
+          <RotateCcw className="h-4 w-4" />
+          Reset
         </button>
+
         <button
           onClick={next}
           disabled={index === cards.length - 1}
-          className="h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center hover:bg-secondary disabled:opacity-30 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronRight className="h-5 w-5 text-foreground" />
+          Next
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </div>

@@ -19,6 +19,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/user', require('./routes/userRoutes'));
+app.use('/api/billing', require('./routes/billingRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/pdf', require('./routes/pdfRoutes'));
 

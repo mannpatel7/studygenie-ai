@@ -1,57 +1,48 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Trophy, RotateCcw, Sparkles, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { aiApi } from "../api/aiApi";
+import { CheckCircle2, XCircle, Trophy, RotateCcw, Loader2 } from "lucide-react";
+import { useContent } from "../context/ContentContext";
+import { Button } from "../components/ui/button";
 
 export default function Quiz() {
-  const location = useLocation();
-  const [questions, setQuestions] = useState<any[]>([]);
+  const { content, isLoading } = useContent();
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [showResult, setShowResult] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Check if we have extracted text from upload
-    if (location.state?.extractedText) {
-      generateQuiz(location.state.extractedText);
-    }
-  }, [location.state]);
+  const questions = content?.quiz || [];
+  const q = questions[current];
+  const isAnswered = selected !== null;
+  const correctIndex = q ? q.options.indexOf(q.correctAnswer) : -1;
+  const isCorrect = selected === correctIndex;
 
-  const generateQuiz = async (text: string) => {
-    setLoading(true);
-    try {
-      const result = await aiApi.generateQuiz({
-        text,
-        subject: location.state?.filename?.replace('.pdf', '') || 'Study Material',
-        count: 10,
-      });
-      setQuestions(result);
-      toast.success("Quiz generated successfully!");
-    } catch (error) {
-      toast.error(error as string);
-      // Fallback to sample questions
-      setQuestions([
-        {
-          question: "What is the basic unit of life?",
-          options: ["Atom", "Cell", "Molecule", "Organ"],
-          correctAnswer: "Cell",
-        },
-        {
-          question: "Which organelle is responsible for energy production?",
-          options: ["Nucleus", "Ribosome", "Mitochondria", "Golgi apparatus"],
-          correctAnswer: "Mitochondria",
-        },
-      ]);
-    } finally {
-      setLoading(false);
+  const handleSelect = (i: number) => {
+    if (isAnswered) return;
+    setSelected(i);
+  };
+
+  const handleNext = () => {
+    setAnswers([...answers, selected]);
+    setSelected(null);
+    if (current + 1 >= questions.length) {
+      setShowResult(true);
+    } else {
+      setCurrent(current + 1);
     }
   };
 
-  if (loading) {
+  const handleRestart = () => {
+    setCurrent(0);
+    setSelected(null);
+    setAnswers([]);
+    setShowResult(false);
+  };
+
+  const score = answers.filter((a, i) => a === questions[i].options.indexOf(questions[i].correctAnswer)).length;
+  const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
+
+  if (isLoading) {
     return (
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="text-center">
@@ -77,75 +68,43 @@ export default function Quiz() {
     );
   }
 
-  const q = questions[current];
-  const isAnswered = selected !== null;
-  const correctIndex = q.options.indexOf(q.correctAnswer);
-  const isCorrect = selected === correctIndex;
-
-  const handleSelect = (i: number) => {
-    if (isAnswered) return;
-    setSelected(i);
-  };
-
-  const handleNext = () => {
-    setAnswers([...answers, selected]);
-    setSelected(null);
-    if (current + 1 >= questions.length) {
-      setShowResult(true);
-    } else {
-      setCurrent(current + 1);
-    }
-  };
-
-  const score = answers.filter((a, i) => a === questions[i].options.indexOf(questions[i].correctAnswer)).length;
-
-  const reset = () => {
-    setCurrent(0);
-    setSelected(null);
-    setAnswers([]);
-    setShowResult(false);
-  };
-
   if (showResult) {
-    const pct = Math.round((score / questions.length) * 100);
     return (
-      <div className="max-w-md mx-auto text-center space-y-6 py-8">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
-          <div className="h-20 w-20 mx-auto rounded-full gradient-primary flex items-center justify-center">
-            <Trophy className="h-10 w-10 text-primary-foreground" />
-          </div>
-        </motion.div>
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">{pct}%</h2>
-          <p className="text-muted-foreground mt-1">You scored {score} out of {questions.length}</p>
-        </div>
-        <div className="h-3 bg-secondary rounded-full overflow-hidden">
-          <motion.div
-            className="h-full gradient-primary rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-          />
-        </div>
-        <button
-          onClick={reset}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl gradient-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+      <div className="max-w-2xl mx-auto space-y-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
         >
-          <RotateCcw className="h-4 w-4" />
-          Retry Quiz
-        </button>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 mb-6">
+            <Trophy className="h-10 w-10 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-foreground mb-2">Quiz Complete!</h2>
+          <p className="text-muted-foreground mb-6">Here's how you performed</p>
+
+          <div className="bg-card rounded-2xl border p-8 mb-6">
+            <div className="text-6xl font-bold text-primary mb-2">{percentage}%</div>
+            <p className="text-muted-foreground">
+              You got {score} out of {questions.length} questions correct
+            </p>
+          </div>
+
+          <Button onClick={handleRestart} size="lg" className="gap-2">
+            <RotateCcw className="h-5 w-5" />
+            Take Quiz Again
+          </Button>
+        </motion.div>
       </div>
     );
   }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div>
+      <div className="text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
         <p className="text-muted-foreground mt-1">Test your knowledge</p>
       </div>
 
-      {/* Progress */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
           <motion.div
@@ -154,7 +113,9 @@ export default function Quiz() {
             transition={{ duration: 0.3 }}
           />
         </div>
-        <span className="text-sm text-muted-foreground font-medium">{current + 1}/{questions.length}</span>
+        <span className="text-sm text-muted-foreground font-medium">
+          {current + 1}/{questions.length}
+        </span>
       </div>
 
       <AnimatePresence mode="wait">

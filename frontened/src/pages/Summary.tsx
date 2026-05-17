@@ -1,43 +1,17 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Copy, Check, FileText, Loader2, Sparkles } from "lucide-react";
+import { Copy, Check, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { aiApi } from "../api/aiApi";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { useContent } from "../context/ContentContext";
+import { Button } from "../components/ui/button";
 
 export default function Summary() {
-  const location = useLocation();
-  const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState<any>(null);
+  const { content, isLoading } = useContent();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    // Check if summary data was passed from upload page
-    if (location.state?.summary) {
-      setSummary(location.state.summary);
-    }
-  }, [location.state]);
-
-  const handleGenerateFromText = async () => {
-    if (!location.state?.extractedText) {
-      toast.error("No text available to generate summary");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await aiApi.generateSummary({
-        text: location.state.extractedText,
-        title: location.state.filename?.replace('.pdf', '') || 'Summary',
-      });
-      setSummary(result);
-      toast.success("Summary regenerated!");
-    } catch (error) {
-      toast.error(error as string);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const summary = content?.summary;
 
   const handleCopy = () => {
     if (summary?.content) {
@@ -48,69 +22,107 @@ export default function Summary() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Summary</h2>
+          <p className="text-muted-foreground mt-1">Generating summary...</p>
+        </div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Summary</h2>
+          <p className="text-muted-foreground mt-1">No summary available</p>
+          <p className="text-sm text-muted-foreground mt-2">Upload a PDF to generate a summary</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">AI Summary</h2>
-          <p className="text-muted-foreground mt-1">
-            {summary?.title ? `Summary of ${summary.title}` : "Intelligent summary of your document"}
-          </p>
-        </div>
-        {location.state?.extractedText && (
-          <button
-            onClick={handleGenerateFromText}
-            disabled={loading}
-            className="px-5 py-2.5 rounded-xl gradient-primary text-primary-foreground font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60 shrink-0"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            Regenerate
-          </button>
-        )}
+      <div className="text-center">
+        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Summary</h2>
+        <p className="text-muted-foreground mt-1">{summary.title}</p>
       </div>
 
-      {loading ? (
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-6 bg-secondary rounded w-1/3"></div>
-            <div className="space-y-2">
-              <div className="h-4 bg-secondary rounded"></div>
-              <div className="h-4 bg-secondary rounded w-5/6"></div>
-              <div className="h-4 bg-secondary rounded"></div>
-              <div className="h-4 bg-secondary rounded w-4/5"></div>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card rounded-2xl border p-6 sm:p-8"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">AI Generated Summary</h3>
+              <p className="text-sm text-muted-foreground">
+                Created from {content.filename}
+              </p>
             </div>
           </div>
+          <Button
+            onClick={handleCopy}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-green-600" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+            {copied ? "Copied!" : "Copy"}
+          </Button>
         </div>
-      ) : summary ? (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-border bg-card p-6 shadow-card"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-foreground">{summary.title || "Document Summary"}</h3>
-            <button
-              onClick={handleCopy}
-              className="p-2 rounded-lg hover:bg-secondary transition-colors"
-            >
-              {copied ? (
-                <Check className="h-5 w-5 text-success" />
-              ) : (
-                <Copy className="h-5 w-5 text-muted-foreground" />
-              )}
-            </button>
-          </div>
-          <div className="prose prose-sm max-w-none text-muted-foreground">
-            <p className="whitespace-pre-wrap leading-relaxed">{summary.content}</p>
-          </div>
-        </motion.div>
-      ) : (
-        <div className="text-center py-16">
-          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-foreground font-medium">No summary available</p>
-          <p className="text-sm text-muted-foreground mt-1">Upload a PDF to generate a summary</p>
+
+        <div className="prose prose-gray dark:prose-invert max-w-none">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-6 mb-4 text-foreground" {...props} />,
+              h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-5 mb-3 text-foreground" {...props} />,
+              h3: ({node, ...props}) => <h3 className="text-xl font-semibold mt-4 mb-2 text-foreground" {...props} />,
+              h4: ({node, ...props}) => <h4 className="text-lg font-semibold mt-3 mb-2 text-foreground" {...props} />,
+              p: ({node, ...props}) => <p className="mb-4 text-foreground leading-7" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 mb-4 ml-4" {...props} />,
+              ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 mb-4 ml-4" {...props} />,
+              li: ({node, ...props}) => <li className="text-foreground" {...props} />,
+              blockquote: ({node, ...props}) => (
+                <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 italic text-muted-foreground bg-blue-50/50 dark:bg-blue-950/20" {...props} />
+              ),
+              code: ({node, inline, ...props}: any) => 
+                inline ? (
+                  <code className="bg-muted px-2 py-1 rounded text-sm font-mono text-foreground" {...props} />
+                ) : (
+                  <code className="block bg-muted p-4 rounded-lg overflow-x-auto my-4 text-sm font-mono text-foreground" {...props} />
+                ),
+              pre: ({node, ...props}) => <pre className="bg-muted p-4 rounded-lg overflow-x-auto my-4" {...props} />,
+              table: ({node, ...props}) => <table className="w-full border-collapse my-4 border border-border" {...props} />,
+              thead: ({node, ...props}) => <thead className="bg-muted" {...props} />,
+              tbody: ({node, ...props}) => <tbody {...props} />,
+              tr: ({node, ...props}) => <tr className="border-b border-border" {...props} />,
+              th: ({node, ...props}) => <th className="border border-border px-4 py-2 text-left font-semibold" {...props} />,
+              td: ({node, ...props}) => <td className="border border-border px-4 py-2" {...props} />,
+              strong: ({node, ...props}) => <strong className="font-bold text-foreground" {...props} />,
+              em: ({node, ...props}) => <em className="italic text-foreground" {...props} />,
+            }}
+          >
+            {summary.content}
+          </ReactMarkdown>
         </div>
-      )}
+      </motion.div>
     </div>
   );
 }

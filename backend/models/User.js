@@ -21,6 +21,18 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Please add a password'],
     minlength: 6,
   },
+  isPremium: {
+    type: Boolean,
+    default: false,
+  },
+  stripeCustomerId: {
+    type: String,
+    default: null,
+  },
+  stripeSubscriptionId: {
+    type: String,
+    default: null,
+  },
 }, {
   timestamps: true,
 });

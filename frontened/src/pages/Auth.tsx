@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { BookOpen, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,6 +26,7 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
     setLoading(true);
 
     try {
@@ -44,7 +46,9 @@ export default function Auth() {
       }
       navigate("/dashboard");
     } catch (error) {
-      toast.error(error as string);
+      const message = error as string;
+      setFormError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -61,11 +65,16 @@ export default function Auth() {
       >
         <div className="rounded-2xl border border-border bg-card shadow-elevated p-6 sm:p-8">
           {/* Logo */}
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-primary-foreground" />
+          <div className="flex flex-col items-center gap-3 mb-8 text-center">
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+              <BookOpen className="h-6 w-6" />
             </div>
-            <span className="text-2xl font-bold text-foreground">StudyGenie AI</span>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">StudyGenie AI</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Sign in to access your study tools or create a new account.
+              </p>
+            </div>
           </div>
 
           {/* Toggle */}
@@ -96,6 +105,11 @@ export default function Auth() {
               onSubmit={handleSubmit}
               className="space-y-4"
             >
+              {formError && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  {formError}
+                </div>
+              )}
               {!isLogin && (
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

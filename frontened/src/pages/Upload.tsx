@@ -1,17 +1,46 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, FileText, X, Sparkles, Loader2 } from "lucide-react";
+import { Upload as UploadIcon, FileText, X, Sparkles, Loader2, Check, BookOpen, Brain, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
-import { pdfApi } from "../api/pdfApi";
 import { aiApi } from "../api/aiApi";
+import { useContent } from "../context/ContentContext";
+import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
+
+const contentTypes = [
+  {
+    id: 'summary',
+    label: 'Summary',
+    description: 'AI-generated summary of your document',
+    icon: FileText,
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+  },
+  {
+    id: 'flashcards',
+    label: 'Flashcards',
+    description: 'Interactive flashcards for quick learning',
+    icon: BookOpen,
+    color: 'text-green-500',
+    bgColor: 'bg-green-50 dark:bg-green-900/20',
+  },
+  {
+    id: 'quiz',
+    label: 'Quiz',
+    description: 'Multiple choice quiz to test your knowledge',
+    icon: HelpCircle,
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-50 dark:bg-purple-900/20',
+  },
+];
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [extractedText, setExtractedText] = useState<string>("");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const navigate = useNavigate();
+  const { appendContent, setIsLoading } = useContent();
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -29,118 +58,205 @@ export default function UploadPage() {
     if (f) setFile(f);
   };
 
+  const removeFile = () => {
+    setFile(null);
+  };
+
+  const toggleContentType = (typeId: string) => {
+    setSelectedTypes(prev =>
+      prev.includes(typeId)
+        ? prev.filter(id => id !== typeId)
+        : [...prev, typeId]
+    );
+  };
+
   const handleGenerate = async () => {
-    if (!file) return;
+    if (!file || selectedTypes.length === 0) return;
 
-    setLoading(true);
+    setIsLoading(true);
     try {
-      // First, upload PDF and extract text
-      const uploadResult = await pdfApi.uploadPDF(file);
-      setExtractedText(uploadResult.text);
-      toast.success("PDF uploaded and text extracted successfully!");
+      const result = await aiApi.generateContent(file, selectedTypes);
 
-      // Then generate summary
-      const summaryResult = await aiApi.generateSummary({
-        text: uploadResult.text,
-        title: file.name.replace('.pdf', ''),
-      });
+      // Store the generated content and preserve upload history
+      appendContent(result);
 
-      toast.success("Summary generated successfully!");
-      navigate("/summary", {
-        state: {
-          summary: summaryResult,
-          extractedText: uploadResult.text,
-          filename: file.name
-        }
-      });
+      toast.success("Content generated successfully!");
+
+      // Map content types to routes
+      const routeMap: {[key: string]: string} = {
+        'summary': '/summary',
+        'flashcards': '/flashcards',
+        'quiz': '/quiz',
+        'study-plan': '/planner',
+      };
+
+      // Navigate based on selected types
+      if (selectedTypes.length === 1) {
+        navigate(routeMap[selectedTypes[0]] || `/${selectedTypes[0]}`);
+      } else {
+        navigate(routeMap[selectedTypes[0]] || `/${selectedTypes[0]}`);
+      }
     } catch (error) {
-      toast.error(error as string);
+      toast.error(error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
+  const isValid = file && selectedTypes.length > 0;
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Upload PDF</h2>
-        <p className="text-muted-foreground mt-1">Upload your study material to generate AI content</p>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="text-center">
+        <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Upload PDF</h2>
+        <p className="text-muted-foreground mt-2 text-lg">Transform your study materials into interactive learning content</p>
       </div>
 
-      {/* Drop zone */}
+      {/* File Upload Section */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        className={`relative rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-colors cursor-pointer ${
-          dragging
-            ? "border-primary bg-accent"
-            : "border-border bg-card hover:border-primary/50"
-        }`}
-        onClick={() => document.getElementById("file-input")?.click()}
+        className="space-y-4"
       >
-        <input
-          id="file-input"
-          type="file"
-          accept=".pdf"
-          onChange={handleFileInput}
-          className="hidden"
-        />
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-16 w-16 rounded-2xl bg-accent flex items-center justify-center">
-            <UploadIcon className="h-8 w-8 text-accent-foreground" />
+        <h3 className="text-xl font-semibold text-foreground">Step 1: Upload PDF</h3>
+
+        {!file ? (
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            className={`relative rounded-2xl border-2 border-dashed p-8 sm:p-12 text-center transition-all cursor-pointer ${
+              dragging
+                ? "border-primary bg-accent scale-105"
+                : "border-border bg-card hover:border-primary/50 hover:bg-accent/50"
+            }`}
+            onClick={() => document.getElementById("file-input")?.click()}
+          >
+            <input
+              id="file-input"
+              type="file"
+              accept=".pdf"
+              onChange={handleFileInput}
+              className="hidden"
+            />
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-16 w-16 rounded-2xl bg-accent flex items-center justify-center">
+                <UploadIcon className="h-8 w-8 text-accent-foreground" />
+              </div>
+              <div>
+                <p className="text-foreground font-semibold text-lg">
+                  Drop your PDF here or <span className="text-primary">browse</span>
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">Supports PDF files up to 10MB</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-foreground font-semibold">
-              Drop your PDF here or <span className="text-primary">browse</span>
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">Supports PDF files up to 10MB</p>
-          </div>
-        </div>
+        ) : (
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{file.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={removeFile}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </Card>
+        )}
       </motion.div>
 
-      {/* File preview */}
-      {file && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="rounded-xl border border-border bg-card p-4 flex items-center justify-between"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
-              <FileText className="h-5 w-5 text-accent-foreground" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-              <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-            </div>
-          </div>
-          <button onClick={() => setFile(null)} className="p-2 rounded-lg hover:bg-secondary shrink-0">
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </motion.div>
-      )}
-
-      {/* Generate button */}
-      <button
-        onClick={handleGenerate}
-        disabled={!file || loading}
-        className="w-full py-3.5 rounded-xl gradient-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40"
+      {/* Content Type Selection */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="space-y-4"
       >
-        {loading ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Processing PDF...
-          </>
-        ) : (
-          <>
-            <Sparkles className="h-5 w-5" />
-            Generate Content
-          </>
+        <h3 className="text-xl font-semibold text-foreground">Step 2: Choose Content Types</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {contentTypes.map((type) => {
+            const Icon = type.icon;
+            const isSelected = selectedTypes.includes(type.id);
+
+            return (
+              <Card
+                key={type.id}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  isSelected
+                    ? 'ring-2 ring-primary shadow-lg'
+                    : 'hover:shadow-md'
+                }`}
+                onClick={() => toggleContentType(type.id)}
+              >
+                <CardContent className="p-6">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className={`h-12 w-12 rounded-xl ${type.bgColor} flex items-center justify-center`}>
+                      <Icon className={`h-6 w-6 ${type.color}`} />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-foreground">{type.label}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">{type.description}</p>
+                    </div>
+                    {isSelected && (
+                      <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-4 w-4 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {selectedTypes.length > 0 && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Sparkles className="h-4 w-4" />
+            <span>Selected: {selectedTypes.map(id => contentTypes.find(t => t.id === id)?.label).join(', ')}</span>
+          </div>
         )}
-      </button>
+      </motion.div>
+
+      {/* Generate Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex justify-center"
+      >
+        <Button
+          onClick={handleGenerate}
+          disabled={!isValid}
+          size="lg"
+          className="px-8 py-3 text-lg"
+        >
+          {isValid ? (
+            <>
+              <Sparkles className="mr-2 h-5 w-5" />
+              Generate Content
+            </>
+          ) : (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Select PDF and content types
+            </>
+          )}
+        </Button>
+      </motion.div>
     </div>
   );
 }

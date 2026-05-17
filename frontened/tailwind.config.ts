@@ -90,6 +90,18 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         shimmer: "shimmer 2s infinite",
       },
+      perspective: {
+        '500': '500px',
+        '1000': '1000px',
+        '1200': '1200px',
+      },
+      backfaceVisibility: {
+        'hidden': 'hidden',
+        'visible': 'visible',
+      },
+      rotate: {
+        'y-180': 'rotateY(180deg)',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
