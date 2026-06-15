@@ -30,7 +30,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     clearContent();
     logout();
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   return (

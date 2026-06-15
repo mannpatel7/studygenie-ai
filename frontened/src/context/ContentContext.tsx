@@ -84,14 +84,30 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const userKeyRef = useRef<string | null>(null);
 
+  const removeStoredContent = (storageKey?: string | null) => {
+    if (storageKey) {
+      localStorage.removeItem(storageKey);
+    }
+    localStorage.removeItem(getStorageKey('guest'));
+  };
+
+  const clearContentState = () => {
+    setContent(null);
+    setHistory([]);
+    setChatMessages([]);
+    setPdfText('');
+    setPdfName('');
+  };
+
   useEffect(() => {
     if (authLoading) {
+      console.log("[ContentContext] authLoading is true, skipping load");
       return;
     }
 
     if (!user) {
-      setContent(null);
-      setHistory([]);
+      console.log("[ContentContext] No user logged in, clearing state");
+      clearContentState();
       userKeyRef.current = null;
       return;
     }
@@ -100,6 +116,7 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
     userKeyRef.current = storageKey;
 
     const saved = localStorage.getItem(storageKey);
+    console.log("[ContentContext] Loading from localStorage key:", storageKey, "Saved data exists:", !!saved);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -110,28 +127,31 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
           setChatMessages(parsed.chatMessages ?? []);
           setPdfText(parsed.pdfText ?? '');
           setPdfName(parsed.pdfName ?? '');
+          console.log("[ContentContext] Successfully loaded history array of length:", parsed.history.length);
         } else if (parsed && typeof parsed === 'object') {
           setHistory(parsed.content ? [parsed.content] : []);
           setContent(parsed.content ?? null);
           setChatMessages(parsed.chatMessages ?? []);
           setPdfText(parsed.pdfText ?? '');
           setPdfName(parsed.pdfName ?? '');
+          console.log("[ContentContext] Successfully loaded single content object");
         }
       } catch (error) {
-        console.error('Failed to parse saved content:', error);
+        console.error('[ContentContext] Failed to parse saved content:', error);
         localStorage.removeItem(storageKey);
       }
     }
   }, [user, authLoading]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userKeyRef.current) {
+      console.log("[ContentContext] Skipping save: userKeyRef.current is null");
       return;
     }
 
-    const storageKey = getStorageKey(user._id || user.id || user.email || 'guest');
-    localStorage.setItem(storageKey, JSON.stringify({ content, history, chatMessages, pdfText, pdfName }));
-  }, [content, history, chatMessages, pdfText, pdfName, user]);
+    console.log("[ContentContext] Writing to localStorage key:", userKeyRef.current, "History length:", history.length);
+    localStorage.setItem(userKeyRef.current, JSON.stringify({ content, history, chatMessages, pdfText, pdfName }));
+  }, [content, history, chatMessages, pdfText, pdfName]);
 
   const appendContent = (newContent: GeneratedContent) => {
     setHistory((prev) => [...prev, newContent]);
@@ -148,15 +168,11 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
   };
 
   const clearContent = () => {
-    if (user) {
-      const storageKey = getStorageKey(user._id || user.id || user.email || 'guest');
-      localStorage.removeItem(storageKey);
+    if (userKeyRef.current) {
+      localStorage.removeItem(userKeyRef.current);
     }
-    setContent(null);
-    setHistory([]);
-    setChatMessages([]);
-    setPdfText('');
-    setPdfName('');
+    clearContentState();
+    userKeyRef.current = null;
   };
 
   const value = {

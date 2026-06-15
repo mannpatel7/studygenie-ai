@@ -40,7 +40,7 @@ export default function UploadPage() {
   const [dragging, setDragging] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const navigate = useNavigate();
-  const { appendContent, setIsLoading } = useContent();
+  const { appendContent, setIsLoading, isLoading } = useContent();
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -240,11 +240,16 @@ export default function UploadPage() {
       >
         <Button
           onClick={handleGenerate}
-          disabled={!isValid}
+          disabled={!isValid || isLoading}
           size="lg"
           className="px-8 py-3 text-lg"
         >
-          {isValid ? (
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Generating Content...
+            </>
+          ) : isValid ? (
             <>
               <Sparkles className="mr-2 h-5 w-5" />
               Generate Content
