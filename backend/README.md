@@ -1,5 +1,7 @@
 # StudyGenie AI Backend
 
+**Live Project**: [https://studygenie-ai-ec6p.vercel.app/](https://studygenie-ai-ec6p.vercel.app/)
+
 A Node.js backend for StudyGenie AI application with Express, MongoDB, and OpenRouter AI integration.
 
 ## Features

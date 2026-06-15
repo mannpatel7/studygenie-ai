@@ -1,5 +1,7 @@
 # StudyGenie AI Frontend
 
+**Live Project**: [https://studygenie-ai-ec6p.vercel.app/](https://studygenie-ai-ec6p.vercel.app/)
+
 A React frontend application with Vite and Tailwind CSS for StudyGenie AI, featuring AI-powered study tools.
 
 ## Features
