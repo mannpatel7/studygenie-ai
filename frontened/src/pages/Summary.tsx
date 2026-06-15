@@ -60,7 +60,7 @@ export default function Summary() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-card rounded-2xl border p-6 sm:p-8"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center">
               <FileText className="h-5 w-5 text-blue-600" />
@@ -72,7 +72,7 @@ export default function Summary() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
             <Button
               onClick={() => {
                 clearSummary();
@@ -80,7 +80,7 @@ export default function Summary() {
               }}
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               <Trash2 className="h-4 w-4" />
               Clear
@@ -89,7 +89,7 @@ export default function Summary() {
               onClick={handleCopy}
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               {copied ? (
                 <Check className="h-4 w-4 text-green-600" />

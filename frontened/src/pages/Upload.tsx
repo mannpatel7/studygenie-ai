@@ -119,7 +119,7 @@ export default function UploadPage() {
         className="space-y-4"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h3 className="text-xl font-semibold text-foreground">Step 2: Choose Content Types</h3>
+          <h3 className="text-xl font-semibold text-foreground">Step 1: Upload PDF</h3>
           <Button
             variant="outline"
             size="sm"

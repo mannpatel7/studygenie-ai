@@ -129,11 +129,11 @@ export default function Flashcards() {
         </motion.div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <button
           onClick={prev}
           disabled={index === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
           Previous
@@ -141,7 +141,7 @@ export default function Flashcards() {
 
         <button
           onClick={reset}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
         >
           <RotateCcw className="h-4 w-4" />
           Reset
@@ -149,7 +149,7 @@ export default function Flashcards() {
 
         <button
           onClick={() => clearFlashcards()}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+          className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
         >
           <Trash2 className="h-4 w-4" />
           Clear
@@ -158,7 +158,7 @@ export default function Flashcards() {
         <button
           onClick={next}
           disabled={index === cards.length - 1}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Next
           <ChevronRight className="h-4 w-4" />

@@ -72,7 +72,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         {/* Top navbar */}
-        <header className="sticky top-0 z-20 h-16 flex items-center justify-between px-4 sm:px-6 border-b border-border bg-card/80 backdrop-blur-md">
+        <header className="sticky top-0 z-20 flex flex-col gap-3 px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between border-b border-border bg-card/80 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               className="lg:hidden p-2 rounded-lg hover:bg-secondary"
@@ -80,11 +80,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             >
               <Menu className="h-5 w-5 text-foreground" />
             </button>
-            <h1 className="text-lg font-semibold text-foreground hidden sm:block">
+            <h1 className="text-lg font-semibold text-foreground">
               {navItems.find(i => i.path === location.pathname)?.label || "StudyGenie AI"}
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-end">
             <ThemeToggle />
             <button
               onClick={handleLogout}
