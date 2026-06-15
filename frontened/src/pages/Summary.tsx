@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Copy, Check, FileText, Loader2 } from "lucide-react";
+import { Copy, Check, FileText, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -8,7 +8,7 @@ import { useContent } from "../context/ContentContext";
 import { Button } from "../components/ui/button";
 
 export default function Summary() {
-  const { content, isLoading } = useContent();
+  const { content, isLoading, clearSummary } = useContent();
   const [copied, setCopied] = useState(false);
 
   const summary = content?.summary;
@@ -72,19 +72,33 @@ export default function Summary() {
               </p>
             </div>
           </div>
-          <Button
-            onClick={handleCopy}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            {copied ? (
-              <Check className="h-4 w-4 text-green-600" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-            {copied ? "Copied!" : "Copy"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => {
+                clearSummary();
+                toast.success("Summary cleared");
+              }}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear
+            </Button>
+            <Button
+              onClick={handleCopy}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
         </div>
 
         <div className="prose prose-gray dark:prose-invert max-w-none">

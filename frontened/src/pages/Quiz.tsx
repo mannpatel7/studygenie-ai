@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Trophy, RotateCcw, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Trophy, RotateCcw, Loader2, Trash2 } from "lucide-react";
 import { useContent } from "../context/ContentContext";
 import { Button } from "../components/ui/button";
 
 export default function Quiz() {
-  const { content, isLoading } = useContent();
+  const { content, isLoading, clearQuiz } = useContent();
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
@@ -15,10 +15,33 @@ export default function Quiz() {
   const q = questions[current] ?? null;
   const options = Array.isArray(q?.options) ? q.options : [];
   const isAnswered = selected !== null;
-  const correctAnswerText = typeof q?.correctAnswer === 'string' ? q.correctAnswer.trim() : '';
-  const correctIndex = options.findIndex(
-    (opt: string) => typeof opt === 'string' && opt.trim().toLowerCase() === correctAnswerText.toLowerCase()
-  );
+
+  const normalizeOption = (opt: unknown) =>
+    typeof opt === 'string' ? opt.trim().toLowerCase() : '';
+
+  const getCorrectIndex = () => {
+    if (q == null) return -1;
+
+    if (typeof q.correctAnswer === 'number' && Number.isInteger(q.correctAnswer)) {
+      return q.correctAnswer >= 0 && q.correctAnswer < options.length ? q.correctAnswer : -1;
+    }
+
+    if (typeof q.correctAnswer === 'string') {
+      const trimmed = q.correctAnswer.trim();
+      const numericValue = Number(trimmed);
+      if (!Number.isNaN(numericValue) && Number.isInteger(numericValue)) {
+        return numericValue >= 0 && numericValue < options.length ? numericValue : -1;
+      }
+
+      return options.findIndex(
+        (opt: string) => normalizeOption(opt) === trimmed.toLowerCase()
+      );
+    }
+
+    return -1;
+  };
+
+  const correctIndex = getCorrectIndex();
   const isCorrect = selected === correctIndex;
   const fallbackCorrectAnswer = correctIndex >= 0 ? options[correctIndex] : q?.correctAnswer;
   const currentQuestionInvalid = !q || !q.question || options.length === 0;
@@ -47,12 +70,28 @@ export default function Quiz() {
 
   const score = answers.filter((a, i) => {
     const question = questions[i];
-    if (!question || !Array.isArray(question.options) || typeof question.correctAnswer !== 'string') {
+    if (!question || !Array.isArray(question.options)) {
       return false;
     }
-    const correctIndex = question.options.findIndex(
-      (opt: string) => typeof opt === 'string' && opt.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase()
-    );
+    const options = question.options;
+    const normalizeOption = (opt: unknown) =>
+      typeof opt === 'string' ? opt.trim().toLowerCase() : '';
+
+    let correctIndex = -1;
+    if (typeof question.correctAnswer === 'number' && Number.isInteger(question.correctAnswer)) {
+      correctIndex = question.correctAnswer >= 0 && question.correctAnswer < options.length ? question.correctAnswer : -1;
+    } else if (typeof question.correctAnswer === 'string') {
+      const trimmed = question.correctAnswer.trim();
+      const numericValue = Number(trimmed);
+      if (!Number.isNaN(numericValue) && Number.isInteger(numericValue)) {
+        correctIndex = numericValue >= 0 && numericValue < options.length ? numericValue : -1;
+      } else {
+        correctIndex = options.findIndex(
+          (opt: string) => normalizeOption(opt) === trimmed.toLowerCase()
+        );
+      }
+    }
+
     return a === correctIndex;
   }).length;
   const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
@@ -127,9 +166,26 @@ export default function Quiz() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
-        <p className="text-muted-foreground mt-1">Test your knowledge</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
+          <p className="text-muted-foreground mt-1">Test your knowledge</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => {
+            clearQuiz();
+            setCurrent(0);
+            setSelected(null);
+            setAnswers([]);
+            setShowResult(false);
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+          Clear
+        </Button>
       </div>
 
       <div className="flex items-center gap-3">

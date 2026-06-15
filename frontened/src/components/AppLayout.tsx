@@ -25,10 +25,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
-  const { clearContent } = useContent();
+  const { persistGuestState } = useContent();
 
   const handleLogout = () => {
-    clearContent();
+    persistGuestState();
     logout();
     navigate("/", { replace: true });
   };

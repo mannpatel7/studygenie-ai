@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CalendarDays, Loader2, Clock, BookOpen, Target, Sparkles, Upload as UploadIcon, FileText, X } from "lucide-react";
+import { CalendarDays, Loader2, Clock, BookOpen, Target, Sparkles, Upload as UploadIcon, FileText, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { aiApi } from "../api/aiApi";
 import { useAuth } from "../context/AuthContext";
@@ -17,7 +17,7 @@ interface PlanItem {
 }
 
 export default function Planner() {
-  const { content, isLoading: contextLoading, appendContent, setContent } = useContent();
+  const { content, isLoading: contextLoading, appendContent, setContent, clearStudyPlan } = useContent();
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -94,9 +94,25 @@ export default function Planner() {
   if (generatedPlan && schedule.length > 0) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Study Planner</h2>
-          <p className="text-muted-foreground mt-1">{generatedPlan.title}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Study Planner</h2>
+            <p className="text-muted-foreground mt-1">{generatedPlan.title}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              clearStudyPlan();
+              setFile(null);
+              setStartDate("");
+              setExamDate("");
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Clear
+          </Button>
         </div>
 
         {contextLoading ? (

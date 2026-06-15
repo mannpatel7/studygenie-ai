@@ -54,6 +54,11 @@ interface ContentContextType {
   appendChatMessage: (message: ChatMessage) => void;
   setPdfData: (text: string, filename: string) => void;
   clearContent: () => void;
+  clearSummary: () => void;
+  clearFlashcards: () => void;
+  clearQuiz: () => void;
+  clearStudyPlan: () => void;
+  persistGuestState: () => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 }
@@ -91,6 +96,16 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
     localStorage.removeItem(getStorageKey('guest'));
   };
 
+  const saveStateToStorage = (storageKey: string | null) => {
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, JSON.stringify({ content, history, chatMessages, pdfText, pdfName }));
+  };
+
+  const persistGuestState = () => {
+    saveStateToStorage(getStorageKey('guest'));
+    userKeyRef.current = getStorageKey('guest');
+  };
+
   const clearContentState = () => {
     setContent(null);
     setHistory([]);
@@ -105,15 +120,14 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
       return;
     }
 
-    if (!user) {
-      console.log("[ContentContext] No user logged in, clearing state");
-      clearContentState();
-      userKeyRef.current = null;
-      return;
-    }
-
-    const storageKey = getStorageKey(user._id || user.id || user.email || 'guest');
+    const storageKey = user
+      ? getStorageKey(user._id || user.id || user.email || 'guest')
+      : getStorageKey('guest');
     userKeyRef.current = storageKey;
+
+    if (!user) {
+      console.log("[ContentContext] No user logged in, loading guest state from", storageKey);
+    }
 
     const saved = localStorage.getItem(storageKey);
     console.log("[ContentContext] Loading from localStorage key:", storageKey, "Saved data exists:", !!saved);
@@ -167,6 +181,20 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
     setPdfName(filename);
   };
 
+  const removeContentField = (field: keyof GeneratedContent) => {
+    setContent((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev } as GeneratedContent;
+      delete updated[field];
+      return Object.keys(updated).length > 0 ? updated : null;
+    });
+  };
+
+  const clearSummary = () => removeContentField('summary');
+  const clearFlashcards = () => removeContentField('flashcards');
+  const clearQuiz = () => removeContentField('quiz');
+  const clearStudyPlan = () => removeContentField('studyPlan');
+
   const clearContent = () => {
     if (userKeyRef.current) {
       localStorage.removeItem(userKeyRef.current);
@@ -187,6 +215,11 @@ export const ContentProvider = ({ children }: ContentProviderProps) => {
     appendChatMessage,
     setPdfData,
     clearContent,
+    clearSummary,
+    clearFlashcards,
+    clearQuiz,
+    clearStudyPlan,
+    persistGuestState,
     isLoading,
     setIsLoading,
   };

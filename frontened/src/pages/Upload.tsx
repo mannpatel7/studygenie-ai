@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Upload as UploadIcon, FileText, X, Sparkles, Loader2, Check, BookOpen, Brain, HelpCircle } from "lucide-react";
+import { Upload as UploadIcon, FileText, X, Sparkles, Loader2, Check, BookOpen, Brain, HelpCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { aiApi } from "../api/aiApi";
 import { useContent } from "../context/ContentContext";
@@ -118,7 +118,21 @@ export default function UploadPage() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-4"
       >
-        <h3 className="text-xl font-semibold text-foreground">Step 1: Upload PDF</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h3 className="text-xl font-semibold text-foreground">Step 2: Choose Content Types</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              setFile(null);
+              setSelectedTypes([]);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Clear
+          </Button>
+        </div>
 
         {!file ? (
           <div

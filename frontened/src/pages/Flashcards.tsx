@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Loader2, Trash2 } from "lucide-react";
 import { useContent } from "../context/ContentContext";
 
 const formatFlashcardText = (text: string) => {
@@ -31,7 +31,7 @@ const formatFlashcardText = (text: string) => {
 };
 
 export default function Flashcards() {
-  const { content, isLoading } = useContent();
+  const { content, isLoading, clearFlashcards } = useContent();
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
 
@@ -145,6 +145,14 @@ export default function Flashcards() {
         >
           <RotateCcw className="h-4 w-4" />
           Reset
+        </button>
+
+        <button
+          onClick={() => clearFlashcards()}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+          Clear
         </button>
 
         <button
