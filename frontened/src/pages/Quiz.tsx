@@ -14,8 +14,14 @@ export default function Quiz() {
   const questions = content?.quiz || [];
   const q = questions[current];
   const isAnswered = selected !== null;
-  const correctIndex = q ? q.options.indexOf(q.correctAnswer) : -1;
+  const correctAnswerText = q?.correctAnswer?.trim() ?? '';
+  const correctIndex = q
+    ? q.options.findIndex(
+        (opt: string) => opt?.trim().toLowerCase() === correctAnswerText.toLowerCase()
+      )
+    : -1;
   const isCorrect = selected === correctIndex;
+  const fallbackCorrectAnswer = correctIndex >= 0 ? q?.options[correctIndex] : q?.correctAnswer;
 
   const handleSelect = (i: number) => {
     if (isAnswered) return;
@@ -155,6 +161,11 @@ export default function Quiz() {
               );
             })}
           </div>
+          {isAnswered && correctIndex === -1 && fallbackCorrectAnswer && (
+            <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
+              Correct answer: <strong>{fallbackCorrectAnswer}</strong>
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
 
