@@ -5,22 +5,9 @@ const Quiz = require('../models/Quiz');
 const StudyPlan = require('../models/StudyPlan');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
-const fs = require('fs');
-const path = require('path');
 
-// Configure multer for file upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
+// Configure multer for in-memory file upload compatible with serverless environments
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -133,16 +120,15 @@ const generateContent = async (req, res) => {
       }
     }
 
-    const filePath = req.file.path;
     const filename = req.file.originalname;
+    const dataBuffer = req.file.buffer;
 
-    // Extract text from PDF
-    const dataBuffer = fs.readFileSync(filePath);
+    if (!Buffer.isBuffer(dataBuffer)) {
+      return res.status(400).json({ message: 'Uploaded PDF payload is invalid' });
+    }
+
     const data = await pdfParse(dataBuffer);
-    const extractedText = data.text;
-
-    // Clean up the uploaded file
-    fs.unlinkSync(filePath);
+    const extractedText = data.text || '';
 
     const result = {
       filename,
