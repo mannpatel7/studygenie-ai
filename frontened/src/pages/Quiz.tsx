@@ -11,17 +11,17 @@ export default function Quiz() {
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [showResult, setShowResult] = useState(false);
 
-  const questions = content?.quiz || [];
-  const q = questions[current];
+  const questions = Array.isArray(content?.quiz) ? content.quiz : [];
+  const q = questions[current] ?? null;
+  const options = Array.isArray(q?.options) ? q.options : [];
   const isAnswered = selected !== null;
-  const correctAnswerText = q?.correctAnswer?.trim() ?? '';
-  const correctIndex = q
-    ? q.options.findIndex(
-        (opt: string) => opt?.trim().toLowerCase() === correctAnswerText.toLowerCase()
-      )
-    : -1;
+  const correctAnswerText = typeof q?.correctAnswer === 'string' ? q.correctAnswer.trim() : '';
+  const correctIndex = options.findIndex(
+    (opt: string) => typeof opt === 'string' && opt.trim().toLowerCase() === correctAnswerText.toLowerCase()
+  );
   const isCorrect = selected === correctIndex;
-  const fallbackCorrectAnswer = correctIndex >= 0 ? q?.options[correctIndex] : q?.correctAnswer;
+  const fallbackCorrectAnswer = correctIndex >= 0 ? options[correctIndex] : q?.correctAnswer;
+  const currentQuestionInvalid = !q || !q.question || options.length === 0;
 
   const handleSelect = (i: number) => {
     if (isAnswered) return;
@@ -45,7 +45,16 @@ export default function Quiz() {
     setShowResult(false);
   };
 
-  const score = answers.filter((a, i) => a === questions[i].options.indexOf(questions[i].correctAnswer)).length;
+  const score = answers.filter((a, i) => {
+    const question = questions[i];
+    if (!question || !Array.isArray(question.options) || typeof question.correctAnswer !== 'string') {
+      return false;
+    }
+    const correctIndex = question.options.findIndex(
+      (opt: string) => typeof opt === 'string' && opt.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase()
+    );
+    return a === correctIndex;
+  }).length;
   const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
 
   if (isLoading) {
@@ -69,6 +78,18 @@ export default function Quiz() {
           <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
           <p className="text-muted-foreground mt-1">No quiz available</p>
           <p className="text-sm text-muted-foreground mt-2">Upload a PDF to generate a quiz</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentQuestionInvalid) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
+          <p className="text-muted-foreground mt-1">This quiz item is invalid.</p>
+          <p className="text-sm text-muted-foreground mt-2">Please regenerate the quiz or upload a different PDF.</p>
         </div>
       </div>
     );
