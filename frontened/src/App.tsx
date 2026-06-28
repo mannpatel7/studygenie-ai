@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ContentProvider } from "./context/ContentContext";
 import { AppLayout } from "@/components/AppLayout";
+import { LoadingAnimation } from "@/components/LoadingAnimation";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import UploadPage from "./pages/Upload";
@@ -24,11 +25,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return <LoadingAnimation />;
   }
 
   return isAuthenticated ? <AppLayout>{children}</AppLayout> : <Navigate to="/" />;
@@ -39,11 +36,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return <LoadingAnimation />;
   }
 
   return isAuthenticated ? <Navigate to="/dashboard" /> : children;

@@ -24,15 +24,10 @@ export default function Summary() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Summary</h2>
-          <p className="text-muted-foreground mt-1">Generating summary...</p>
-        </div>
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
+      <LoadingAnimation
+        message="Generating summary..."
+        subtext="Summarizing your document now."
+      />
     );
   }
 

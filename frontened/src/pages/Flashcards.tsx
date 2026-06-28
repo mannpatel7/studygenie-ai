@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Loader2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useContent } from "../context/ContentContext";
+import { LoadingAnimation } from "../components/LoadingAnimation";
 
 const formatFlashcardText = (text: string) => {
   if (!text) return text;
@@ -54,15 +55,10 @@ export default function Flashcards() {
 
   if (isLoading) {
     return (
-      <div className="max-w-xl mx-auto space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Flashcards</h2>
-          <p className="text-muted-foreground mt-1">Generating flashcards...</p>
-        </div>
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
+      <LoadingAnimation
+        message="Generating flashcards..."
+        subtext="Preparing your study cards."
+      />
     );
   }
 

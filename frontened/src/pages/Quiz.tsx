@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Trophy, RotateCcw, Loader2, Trash2 } from "lucide-react";
+import { CheckCircle2, XCircle, Trophy, RotateCcw, Trash2 } from "lucide-react";
 import { useContent } from "../context/ContentContext";
 import { Button } from "../components/ui/button";
+import { LoadingAnimation } from "../components/LoadingAnimation";
 
 export default function Quiz() {
   const { content, isLoading, clearQuiz } = useContent();
@@ -98,15 +99,10 @@ export default function Quiz() {
 
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Quiz</h2>
-          <p className="text-muted-foreground mt-1">Generating quiz...</p>
-        </div>
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
+      <LoadingAnimation
+        message="Generating quiz..."
+        subtext="Getting your practice ready."
+      />
     );
   }
 
